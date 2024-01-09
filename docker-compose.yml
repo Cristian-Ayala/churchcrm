@@ -1,0 +1,53 @@
+version: "3.8"
+
+services:
+  webserver:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: churchcrm_app
+    expose:
+      - "80"
+    volumes:
+      - html:/var/www/html
+      - churchcrm:/var/www/churchcrm
+      - apache-config:/etc/apache2/sites-available
+      - ./webserver/logs:/var/log/apache2
+    environment:
+      - APACHE_RUN_USER=www-data
+      - APACHE_RUN_GROUP=www-data
+      - VIRTUAL_HOST=${SUBDOMAIN_CHURCHCRM}
+      - LETSENCRYPT_HOST=${SUBDOMAIN_CHURCHCRM}
+      - LETSENCRYPT_EMAIL=${LETSENCRYPT_EMAIL_MAIN}
+    networks:
+      acosta_rep_net:
+        aliases:
+          - webserver
+
+  mariadb-db:
+    image: mariadb
+    container_name: mariadb
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "3309:3306"
+    volumes:
+      - mariadb-data:/var/lib/mysql
+    networks:
+      acosta_rep_net:
+        aliases:
+          - mariadb-db
+
+volumes:
+  mariadb-data:
+  html:
+  churchcrm:
+  apache-config:
+
+networks:
+  acosta_rep_net:
+    external: true

@@ -1,0 +1,58 @@
+version: "3.8"
+
+services:
+  nginx-proxy:
+    image: nginxproxy/nginx-proxy:alpine
+    container_name: nginx-proxy
+    labels:
+      # allow letsencrypt to discover nginx service it paired up with
+      - com.github.jrcs.letsencrypt_nginx_proxy_companion.nginx_proxy
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/tmp/docker.sock:ro
+      - certs:/etc/nginx/certs:ro
+      - vhostd:/etc/nginx/vhost.d
+      - html:/usr/share/nginx/html
+    environment:
+      - ENABLE_IPV6=true
+    networks:
+      acosta-rep-network:
+        aliases:
+          - nginxProxy
+
+  letsencrypt:
+    image: nginxproxy/acme-companion
+    container_name: nginx-proxy-acme
+    restart: always
+    environment:
+      - NGINX_PROXY_CONTAINER=nginx-proxy
+      - DEFAULT_EMAIL=${LETSENCRYPT_EMAIL_MAIN}
+      - DHPARAM_GENERATION=false
+    volumes:
+      - certs:/etc/nginx/certs:rw
+      - acme:/etc/acme.sh
+      - vhostd:/etc/nginx/vhost.d
+      - html:/usr/share/nginx/html
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    depends_on:
+      - nginx-proxy
+    networks:
+      acosta-rep-network:
+        aliases:
+          - letsencrypt
+
+volumes:
+  certs:
+  html:
+  acme:
+  vhostd:
+
+networks:
+  acosta-rep-network:
+    name: acosta_rep_net
+    driver: bridge
+    ipam:
+      driver: default
